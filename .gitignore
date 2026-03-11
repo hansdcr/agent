@@ -9,7 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .idea/
-
+src/agent.egg-info/
 .env
 .env.example
 docs/
