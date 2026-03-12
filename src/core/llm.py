@@ -8,6 +8,10 @@ from typing import AsyncIterator, Dict, List
 
 from openai import AsyncOpenAI
 
+from src.core.logger import get_logger
+
+logger = get_logger("llm")
+
 
 class LLMClient(ABC):
     """LLM客户端抽象基类.
@@ -76,6 +80,7 @@ class DeepSeekClient(LLMClient):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
         self.kwargs = kwargs
+        logger.info(f"DeepSeek客户端初始化成功 | 模型: {model} | URL: {base_url}")
 
     async def chat(self, messages: List[Dict[str, str]]) -> str:
         """异步调用DeepSeek API获取回复.
@@ -89,10 +94,17 @@ class DeepSeekClient(LLMClient):
         Raises:
             Exception: API调用失败时抛出异常
         """
-        response = await self.client.chat.completions.create(
-            model=self.model, messages=messages, **self.kwargs
-        )
-        return response.choices[0].message.content
+        try:
+            logger.debug(f"发送聊天请求 | 消息数: {len(messages)}")
+            response = await self.client.chat.completions.create(
+                model=self.model, messages=messages, **self.kwargs
+            )
+            content = response.choices[0].message.content
+            logger.debug(f"收到聊天响应 | 长度: {len(content)} 字符")
+            return content
+        except Exception as e:
+            logger.error(f"聊天请求失败 | 错误: {str(e)}")
+            raise
 
     async def chat_stream(self, messages: List[Dict[str, str]]) -> AsyncIterator[str]:
         """流式对话接口.
@@ -106,9 +118,17 @@ class DeepSeekClient(LLMClient):
         Raises:
             Exception: API调用失败时抛出异常
         """
-        stream = await self.client.chat.completions.create(
-            model=self.model, messages=messages, stream=True, **self.kwargs
-        )
-        async for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        try:
+            logger.debug(f"发送流式聊天请求 | 消息数: {len(messages)}")
+            stream = await self.client.chat.completions.create(
+                model=self.model, messages=messages, stream=True, **self.kwargs
+            )
+            chunk_count = 0
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    chunk_count += 1
+                    yield chunk.choices[0].delta.content
+            logger.debug(f"流式聊天完成 | 片段数: {chunk_count}")
+        except Exception as e:
+            logger.error(f"流式聊天请求失败 | 错误: {str(e)}")
+            raise

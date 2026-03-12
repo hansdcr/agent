@@ -14,6 +14,9 @@ from src.api.models.response import ApiResponse
 from src.core.conversation import Conversation
 from src.core.exceptions import InternalServerException
 from src.core.llm import DeepSeekClient
+from src.core.logger import get_logger
+
+logger = get_logger("chat")
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -34,11 +37,13 @@ def get_or_create_session(
         (会话ID, 会话对象)的元组
     """
     if session_id and session_id in sessions:
+        logger.debug(f"使用现有会话 | session_id: {session_id}")
         return session_id, sessions[session_id]
 
     # 创建新会话
     new_session_id = str(uuid.uuid4())
     sessions[new_session_id] = Conversation(system_prompt=system_prompt)
+    logger.info(f"创建新会话 | session_id: {new_session_id}")
     return new_session_id, sessions[new_session_id]
 
 
@@ -55,6 +60,7 @@ async def chat(
     Returns:
         统一格式的聊天响应
     """
+    logger.info(f"收到聊天请求 | 消息长度: {len(request_data.message)} 字符")
     settings = request.app.state.settings
 
     # 获取或创建会话
@@ -79,9 +85,11 @@ async def chat(
         response = await client.chat(conversation.get_messages())
         # 添加助手消息
         conversation.add_assistant_message(response)
+        logger.info(f"聊天请求成功 | session_id: {session_id} | 响应长度: {len(response)} 字符")
         chat_response = ChatResponse(message=response, session_id=session_id)
         return ApiResponse.success(data=chat_response)
     except Exception as e:
+        logger.error(f"聊天请求失败 | session_id: {session_id} | 错误: {str(e)}")
         raise InternalServerException(error=str(e))
 
 
@@ -101,6 +109,7 @@ async def chat_stream(
     Raises:
         HTTPException: API调用失败时抛出500错误
     """
+    logger.info(f"收到流式聊天请求 | 消息长度: {len(request_data.message)} 字符")
     settings = request.app.state.settings
 
     # 获取或创建会话
@@ -135,9 +144,11 @@ async def chat_stream(
 
             # 添加完整的助手消息到会话
             conversation.add_assistant_message(full_response)
+            logger.info(f"流式聊天完成 | session_id: {session_id} | 响应长度: {len(full_response)} 字符")
             # 发送结束标记
             yield "data: {'done': true}\n\n"
         except Exception as e:
+            logger.error(f"流式聊天失败 | session_id: {session_id} | 错误: {str(e)}")
             yield f"data: {{'error': '{str(e)}'}}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")

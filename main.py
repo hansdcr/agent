@@ -13,6 +13,7 @@ from src.api.models.response import ApiResponse
 from src.api.routes import chat
 from src.config.settings import Settings
 from src.core.exceptions import AppException
+from src.core.logger import setup_logger, get_logger
 
 
 @asynccontextmanager
@@ -26,14 +27,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         None
     """
     # 启动时初始化
-    print("🚀 AI Agent启动中...")
     settings = Settings()
     app.state.settings = settings
-    print("✓ 配置加载成功")
-    print(f"✓ 模型: {settings.deepseek_model}")
+
+    # 初始化日志系统
+    logger = setup_logger(
+        name="ai_agent",
+        level=settings.log_level,
+        log_file=settings.log_file,
+        max_bytes=settings.log_max_bytes,
+        backup_count=settings.log_backup_count,
+        enable_color=settings.log_enable_color,
+    )
+
+    logger.info("🚀 AI Agent启动中...")
+    logger.info("✓ 配置加载成功")
+    logger.info(f"✓ 模型: {settings.deepseek_model}")
+    logger.info(f"✓ 日志级别: {settings.log_level}")
+    if settings.log_file:
+        logger.info(f"✓ 日志文件: {settings.log_file}")
+
     yield
+
     # 关闭时清理
-    print("👋 AI Agent关闭")
+    logger.info("👋 AI Agent关闭")
 
 
 app = FastAPI(
@@ -55,6 +72,13 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     Returns:
         统一格式的JSON错误响应
     """
+    logger = get_logger()
+    logger.error(
+        f"AppException: {exc.data.get('error')} | "
+        f"Code: {exc.code} | "
+        f"Path: {request.url.path}"
+    )
+
     return JSONResponse(
         status_code=exc.code,
         content={

@@ -58,6 +58,33 @@ class Settings(BaseSettings):
         description="系统提示词",
     )
 
+    # 日志配置
+    log_level: str = Field(
+        default="INFO",
+        description="日志级别（DEBUG, INFO, WARNING, ERROR, CRITICAL）",
+        validation_alias="LOG_LEVEL",
+    )
+    log_file: str = Field(
+        default="logs/app.log",
+        description="日志文件路径",
+        validation_alias="LOG_FILE",
+    )
+    log_max_bytes: int = Field(
+        default=10 * 1024 * 1024,  # 10MB
+        description="单个日志文件最大字节数",
+        validation_alias="LOG_MAX_BYTES",
+    )
+    log_backup_count: int = Field(
+        default=5,
+        description="保留的日志文件备份数量",
+        validation_alias="LOG_BACKUP_COUNT",
+    )
+    log_enable_color: bool = Field(
+        default=True,
+        description="是否启用彩色日志输出",
+        validation_alias="LOG_ENABLE_COLOR",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

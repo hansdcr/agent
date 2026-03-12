@@ -6,6 +6,10 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal
 
+from src.core.logger import get_logger
+
+logger = get_logger("conversation")
+
 
 @dataclass
 class Message:
@@ -73,6 +77,8 @@ class Conversation:
 
     def clear(self) -> None:
         """清空对话历史，保留系统消息."""
+        message_count = len(self.messages) - 1  # 减去系统消息
         self.messages = []
         if self.system_prompt:
             self.messages.append(Message(role="system", content=self.system_prompt))
+        logger.info(f"清空对话历史 | 清除消息数: {message_count}")
