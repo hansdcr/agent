@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from src.api.models.chat import ChatRequest, ChatResponse
 from src.api.models.response import ApiResponse
 from src.core.conversation import Conversation
+from src.core.exceptions import InternalServerException
 from src.core.llm import DeepSeekClient
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -81,7 +82,7 @@ async def chat(
         chat_response = ChatResponse(message=response, session_id=session_id)
         return ApiResponse.success(data=chat_response)
     except Exception as e:
-        return ApiResponse.error(error=str(e), code=500)
+        raise InternalServerException(error=str(e))
 
 
 @router.post("/stream")

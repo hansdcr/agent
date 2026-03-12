@@ -6,11 +6,13 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from src.api.models.response import ApiResponse
 from src.api.routes import chat
 from src.config.settings import Settings
+from src.core.exceptions import AppException
 
 
 @asynccontextmanager
@@ -40,6 +42,29 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    """全局AppException异常处理器.
+
+    Args:
+        request: FastAPI请求对象
+        exc: AppException异常实例
+
+    Returns:
+        统一格式的JSON错误响应
+    """
+    return JSONResponse(
+        status_code=exc.code,
+        content={
+            "code": exc.code,
+            "status": exc.status,
+            "data": exc.data,
+            "message": exc.message,
+        },
+    )
+
 
 # 注册路由
 app.include_router(chat.router)
