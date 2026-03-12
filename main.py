@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.api.routes import chat
 from src.config.settings import Settings
 
 
@@ -37,6 +38,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# 注册路由
+app.include_router(chat.router)
 
 
 @app.get("/health")
