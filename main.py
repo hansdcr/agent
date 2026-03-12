@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.api.models.response import ApiResponse
 from src.api.routes import chat
 from src.config.settings import Settings
 
@@ -48,6 +49,7 @@ async def health_check():
     """健康检查接口.
 
     Returns:
-        包含状态信息的字典
+        统一格式的健康状态响应
     """
-    return {"status": "healthy", "version": "0.1.0"}
+    health_data = {"status": "healthy", "version": "0.1.0"}
+    return ApiResponse.success(data=health_data)

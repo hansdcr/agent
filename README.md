@@ -72,6 +72,36 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 
 ## API接口
 
+所有接口均采用统一的RESTful响应格式：
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "status": 200,
+  "data": { ... },
+  "message": "success"
+}
+```
+
+**错误响应**：
+```json
+{
+  "code": 500,
+  "status": 500,
+  "data": {
+    "error": "错误信息"
+  },
+  "message": "error"
+}
+```
+
+**字段说明**：
+- `code`: HTTP状态码
+- `status`: 响应状态码（与code相同）
+- `data`: 响应数据
+- `message`: 消息说明
+
 ### 1. 健康检查
 
 ```bash
@@ -81,8 +111,13 @@ GET /health
 **响应示例**：
 ```json
 {
-  "status": "healthy",
-  "version": "0.1.0"
+  "code": 200,
+  "status": 200,
+  "data": {
+    "status": "healthy",
+    "version": "0.1.0"
+  },
+  "message": "success"
 }
 ```
 
@@ -101,8 +136,13 @@ Content-Type: application/json
 **响应示例**：
 ```json
 {
-  "message": "你好！我是DeepSeek AI助手，很高兴为你服务。",
-  "session_id": "uuid-xxx-xxx"
+  "code": 200,
+  "status": 200,
+  "data": {
+    "message": "你好！我是DeepSeek AI助手，很高兴为你服务。",
+    "session_id": "uuid-xxx-xxx"
+  },
+  "message": "success"
 }
 ```
 
@@ -113,6 +153,18 @@ POST /chat/
 {
   "message": "介绍一下你自己",
   "session_id": "uuid-xxx-xxx"
+}
+```
+
+**错误响应示例**：
+```json
+{
+  "code": 500,
+  "status": 500,
+  "data": {
+    "error": "API调用失败: ..."
+  },
+  "message": "error"
 }
 ```
 
@@ -172,17 +224,24 @@ async def chat():
             "http://localhost:8000/chat/",
             json={"message": "你好"}
         ) as resp:
-            data = await resp.json()
-            print(f"AI: {data['message']}")
-            session_id = data['session_id']
+            result = await resp.json()
+            # 解析统一响应格式
+            if result["status"] == 200:
+                data = result["data"]
+                print(f"AI: {data['message']}")
+                session_id = data['session_id']
+            else:
+                print(f"Error: {result['data']['error']}")
+                return
 
         # 继续对话
         async with session.post(
             "http://localhost:8000/chat/",
             json={"message": "再见", "session_id": session_id}
         ) as resp:
-            data = await resp.json()
-            print(f"AI: {data['message']}")
+            result = await resp.json()
+            if result["status"] == 200:
+                print(f"AI: {result['data']['message']}")
 
 asyncio.run(chat())
 ```

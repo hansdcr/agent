@@ -6,10 +6,11 @@
 import uuid
 from typing import Dict
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from src.api.models.chat import ChatRequest, ChatResponse
+from src.api.models.response import ApiResponse
 from src.core.conversation import Conversation
 from src.core.llm import DeepSeekClient
 
@@ -38,7 +39,7 @@ def get_or_create_session(session_id: str | None, system_prompt: str) -> tuple:
     return new_session_id, sessions[new_session_id]
 
 
-@router.post("/", response_model=ChatResponse)
+@router.post("/", response_model=ApiResponse[ChatResponse])
 async def chat(request_data: ChatRequest, request: Request):
     """普通对话接口.
 
@@ -47,10 +48,7 @@ async def chat(request_data: ChatRequest, request: Request):
         request: FastAPI请求对象
 
     Returns:
-        聊天响应
-
-    Raises:
-        HTTPException: API调用失败时抛出500错误
+        统一格式的聊天响应
     """
     settings = request.app.state.settings
 
@@ -76,9 +74,10 @@ async def chat(request_data: ChatRequest, request: Request):
         response = await client.chat(conversation.get_messages())
         # 添加助手消息
         conversation.add_assistant_message(response)
-        return ChatResponse(message=response, session_id=session_id)
+        chat_response = ChatResponse(message=response, session_id=session_id)
+        return ApiResponse.success(data=chat_response)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"API调用失败: {str(e)}")
+        return ApiResponse.error(error=str(e), code=500)
 
 
 @router.post("/stream")

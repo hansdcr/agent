@@ -33,8 +33,12 @@ async def test_health_check():
         response = await client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "healthy"
-        assert "version" in data
+        # 验证统一响应格式
+        assert data["code"] == 200
+        assert data["status"] == 200
+        assert "data" in data
+        assert data["data"]["status"] == "healthy"
+        assert "version" in data["data"]
 
 
 @pytest.mark.asyncio
@@ -57,20 +61,26 @@ async def test_chat_endpoint(test_settings):
             )
             assert response.status_code == 200
             data = response.json()
-            assert "message" in data
-            assert "session_id" in data
-            assert data["message"] == "你好！我是AI助手。"
+            # 验证统一响应格式
+            assert data["code"] == 200
+            assert data["status"] == 200
+            assert "data" in data
+            assert "message" in data["data"]
+            assert "session_id" in data["data"]
+            assert data["data"]["message"] == "你好！我是AI助手。"
 
             # 使用相同session_id发送第二条消息
-            session_id = data["session_id"]
+            session_id = data["data"]["session_id"]
             mock_instance.chat = AsyncMock(return_value="再见！")
             response = await client.post(
                 "/chat/", json={"message": "再见", "session_id": session_id}
             )
             assert response.status_code == 200
             data = response.json()
-            assert data["session_id"] == session_id
-            assert data["message"] == "再见！"
+            assert data["code"] == 200
+            assert data["status"] == 200
+            assert data["data"]["session_id"] == session_id
+            assert data["data"]["message"] == "再见！"
 
 
 @pytest.mark.asyncio
