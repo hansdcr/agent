@@ -4,7 +4,7 @@
 """
 
 import uuid
-from typing import Dict
+from typing import AsyncIterator, Dict, Tuple
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -20,7 +20,9 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 sessions: Dict[str, Conversation] = {}
 
 
-def get_or_create_session(session_id: str | None, system_prompt: str) -> tuple:
+def get_or_create_session(
+    session_id: str | None, system_prompt: str
+) -> Tuple[str, Conversation]:
     """获取或创建会话.
 
     Args:
@@ -40,7 +42,9 @@ def get_or_create_session(session_id: str | None, system_prompt: str) -> tuple:
 
 
 @router.post("/", response_model=ApiResponse[ChatResponse])
-async def chat(request_data: ChatRequest, request: Request):
+async def chat(
+    request_data: ChatRequest, request: Request
+) -> ApiResponse[ChatResponse]:
     """普通对话接口.
 
     Args:
@@ -81,7 +85,9 @@ async def chat(request_data: ChatRequest, request: Request):
 
 
 @router.post("/stream")
-async def chat_stream(request_data: ChatRequest, request: Request):
+async def chat_stream(
+    request_data: ChatRequest, request: Request
+) -> StreamingResponse:
     """流式对话接口.
 
     Args:
@@ -113,7 +119,7 @@ async def chat_stream(request_data: ChatRequest, request: Request):
         max_tokens=settings.max_tokens,
     )
 
-    async def generate():
+    async def generate() -> AsyncIterator[str]:
         """生成流式响应."""
         try:
             full_response = ""

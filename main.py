@@ -4,6 +4,7 @@
 """
 
 from contextlib import asynccontextmanager
+from typing import AsyncIterator, Dict
 
 from fastapi import FastAPI
 
@@ -13,7 +14,7 @@ from src.config.settings import Settings
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """应用生命周期管理.
 
     Args:
@@ -45,7 +46,7 @@ app.include_router(chat.router)
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> ApiResponse[Dict[str, str]]:
     """健康检查接口.
 
     Returns:

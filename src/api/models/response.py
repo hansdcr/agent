@@ -1,4 +1,4 @@
-"""统一响应模型.
+s"""统一响应模型.
 
 定义RESTful风格的统一响应格式。
 """
@@ -27,7 +27,9 @@ class ApiResponse(BaseModel, Generic[T]):
     message: Optional[str] = Field(default=None, description="消息说明")
 
     @classmethod
-    def success(cls, data: T, code: int = 200, message: str = "success"):
+    def success(
+        cls, data: T, code: int = 200, message: str = "success"
+    ) -> "ApiResponse[T]":
         """创建成功响应.
 
         Args:
@@ -41,7 +43,9 @@ class ApiResponse(BaseModel, Generic[T]):
         return cls(code=code, status=code, data=data, message=message)
 
     @classmethod
-    def error(cls, error: str, code: int = 500, message: str = "error"):
+    def error(
+        cls, error: str, code: int = 500, message: str = "error"
+    ) -> "ApiResponse[dict]":
         """创建错误响应.
 
         Args:
