@@ -7,6 +7,7 @@ import uuid
 from typing import Dict
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from src.api.models.chat import ChatRequest, ChatResponse
 from src.core.conversation import Conversation
@@ -78,3 +79,59 @@ async def chat(request_data: ChatRequest, request: Request):
         return ChatResponse(message=response, session_id=session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"API调用失败: {str(e)}")
+
+
+@router.post("/stream")
+async def chat_stream(request_data: ChatRequest, request: Request):
+    """流式对话接口.
+
+    Args:
+        request_data: 聊天请求数据
+        request: FastAPI请求对象
+
+    Returns:
+        Server-Sent Events流式响应
+
+    Raises:
+        HTTPException: API调用失败时抛出500错误
+    """
+    settings = request.app.state.settings
+
+    # 获取或创建会话
+    session_id, conversation = get_or_create_session(
+        request_data.session_id, settings.system_prompt
+    )
+
+    # 添加用户消息
+    conversation.add_user_message(request_data.message)
+
+    # 创建LLM客户端
+    client = DeepSeekClient(
+        api_key=settings.deepseek_api_key,
+        model=settings.deepseek_model,
+        base_url=settings.deepseek_base_url,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
+    )
+
+    async def generate():
+        """生成流式响应."""
+        try:
+            full_response = ""
+            # 发送会话ID
+            yield f"data: {{'session_id': '{session_id}'}}\n\n"
+
+            # 流式获取回复
+            async for chunk in client.chat_stream(conversation.get_messages()):
+                full_response += chunk
+                # 发送文本片段
+                yield f"data: {{'content': '{chunk}'}}\n\n"
+
+            # 添加完整的助手消息到会话
+            conversation.add_assistant_message(full_response)
+            # 发送结束标记
+            yield "data: {'done': true}\n\n"
+        except Exception as e:
+            yield f"data: {{'error': '{str(e)}'}}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
