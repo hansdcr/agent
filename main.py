@@ -104,7 +104,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
 app.include_router(chat.router)
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check() -> ApiResponse[Dict[str, str]]:
     """健康检查接口.
 

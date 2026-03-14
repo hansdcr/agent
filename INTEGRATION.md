@@ -20,7 +20,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ### 2. 后端API接口
 
-- **聊天接口**: `POST http://localhost:8000/chat/`
+- **聊天接口**: `POST http://localhost:8000/api/chat/`
   - 请求体:
     ```json
     {
@@ -41,7 +41,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
     }
     ```
 
-- **健康检查**: `GET http://localhost:8000/health`
+- **健康检查**: `GET http://localhost:8000/api/health`
 
 ### 3. CORS配置
 

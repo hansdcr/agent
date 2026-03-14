@@ -18,7 +18,7 @@ from src.core.logger import get_logger
 
 logger = get_logger("chat")
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 # 会话存储（内存）
 sessions: Dict[str, Conversation] = {}
