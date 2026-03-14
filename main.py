@@ -2,14 +2,16 @@
 
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from src.application.chat.commands import ChatCommandHandler
 from src.infrastructure.persistence.repositories.conversation_repository import (
-    InMemoryConversationRepository,
+    PostgresConversationRepository,
 )
 from src.infrastructure.persistence.repositories.memory_repository import (
     PostgresMemoryRepository,
@@ -28,29 +30,29 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = Settings()
     app.state.settings = settings
 
-    # 初始化仓储
-    conversation_repo = InMemoryConversationRepository()
+    # 转换数据库URL
+    database_url = settings.database_url
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
+            "postgresql://", "postgresql+asyncpg://", 1
+        )
+
+    # 创建数据库引擎
+    engine = create_async_engine(database_url, echo=False)
+    session_factory = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    # 创建表
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # 初始化对话仓储（使用数据库持久化）
+    conversation_repo = PostgresConversationRepository(session_factory)
 
     # 初始化记忆仓储（如果启用）
     memory_repo = None
     if settings.memory_enabled:
-        # 转换数据库URL
-        database_url = settings.database_url
-        if database_url.startswith("postgresql://"):
-            database_url = database_url.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
-
-        # 创建数据库引擎
-        engine = create_async_engine(database_url, echo=False)
-        session_factory = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        # 创建表
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
         memory_repo = PostgresMemoryRepository(session_factory)
 
     # 初始化LLM服务
@@ -75,6 +77,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("🚀 AI Agent启动成功 (DDD架构)")
     print(f"✓ 模型: {settings.deepseek_model}")
     print(f"✓ 记忆系统: {'启用' if settings.memory_enabled else '禁用'}")
+    print(f"✓ 对话持久化: 数据库存储")
 
     yield
 
@@ -100,6 +103,16 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(chat.router)
+
+# 挂载静态文件（简单的 HTML 聊天界面）
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# 挂载前端 React 应用
+web_app_dist = os.path.join(os.path.dirname(__file__), "../web-app/dist")
+if os.path.exists(web_app_dist):
+    app.mount("/", StaticFiles(directory=web_app_dist, html=True), name="webapp")
 
 
 @app.get("/api/health")

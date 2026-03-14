@@ -1,6 +1,6 @@
 """接口层 - API Schemas"""
 
-from typing import Optional, Generic, TypeVar
+from typing import Optional, Generic, TypeVar, List
 from pydantic import BaseModel, Field
 
 T = TypeVar("T")
@@ -16,6 +16,18 @@ class ChatResponse(BaseModel):
     """聊天响应模型"""
     message: str = Field(..., description="AI回复")
     session_id: str = Field(..., description="会话ID")
+
+
+class MessageItem(BaseModel):
+    """消息项模型"""
+    role: str = Field(..., description="消息角色：system/user/assistant")
+    content: str = Field(..., description="消息内容")
+
+
+class HistoryResponse(BaseModel):
+    """历史消息响应模型"""
+    session_id: str = Field(..., description="会话ID")
+    messages: List[MessageItem] = Field(default_factory=list, description="消息列表")
 
 
 class ApiResponse(BaseModel, Generic[T]):

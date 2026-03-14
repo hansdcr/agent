@@ -2,12 +2,12 @@
 
 from typing import AsyncIterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.application.chat.commands import ChatCommandHandler
 from src.application.chat.dtos import ChatRequestDTO, ChatResponseDTO
-from ..schemas import ChatRequest, ChatResponse, ApiResponse
+from ..schemas import ChatRequest, ChatResponse, ApiResponse, HistoryResponse, MessageItem
 from ..dependencies import get_chat_handler
 
 
@@ -33,6 +33,52 @@ async def chat(
     )
 
     return ApiResponse.success(data=response)
+
+
+@router.get("/chat/history/{session_id}", response_model=ApiResponse[HistoryResponse])
+async def get_chat_history(
+    session_id: str,
+    handler: ChatCommandHandler = Depends(get_chat_handler),
+) -> ApiResponse[HistoryResponse]:
+    """获取聊天历史"""
+    from src.domain.chat.value_objects import SessionId
+
+    try:
+        # 查找对话
+        sid = SessionId.from_string(session_id)
+        conversation = await handler.conversation_repo.find_by_id(sid)
+
+        if not conversation:
+            # 如果没有找到对话，返回空历史
+            return ApiResponse.success(
+                data=HistoryResponse(
+                    session_id=session_id,
+                    messages=[]
+                )
+            )
+
+        # 获取消息列表（排除 system 消息）
+        messages = conversation.get_messages_as_dicts()
+        message_items = [
+            MessageItem(role=msg["role"], content=msg["content"])
+            for msg in messages
+            if msg["role"] != "system"  # 不返回系统消息给前端
+        ]
+
+        return ApiResponse.success(
+            data=HistoryResponse(
+                session_id=session_id,
+                messages=message_items
+            )
+        )
+    except ValueError:
+        # 无效的 session_id 格式，返回空历史
+        return ApiResponse.success(
+            data=HistoryResponse(
+                session_id=session_id,
+                messages=[]
+            )
+        )
 
 
 @router.post("/stream")
