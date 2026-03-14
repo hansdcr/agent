@@ -4,10 +4,12 @@
 """
 
 import asyncio
+import pytest
 from src.domain.chat.entities import Conversation, Message
 from src.domain.chat.value_objects import SessionId, MessageRole, MessageContent
 
 
+@pytest.mark.asyncio
 async def test_ddd_architecture():
     """测试DDD架构"""
     print("=" * 60)

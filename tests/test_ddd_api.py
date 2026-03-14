@@ -4,8 +4,10 @@ import asyncio
 import os
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient, ASGITransport
+import pytest
 
 
+@pytest.mark.asyncio
 async def test_ddd_api_simple():
     """测试DDD架构API（简化版）"""
     print("=" * 60)
@@ -26,7 +28,7 @@ async def test_ddd_api_simple():
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         # 导入app
-        from main_ddd import app
+        from main import app
 
         # 使用lifespan上下文
         async with app.router.lifespan_context(app):

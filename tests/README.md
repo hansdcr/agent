@@ -4,18 +4,6 @@
 
 ## 测试文件说明
 
-### test_api.py
-测试原始架构的API接口。
-
-**测试内容：**
-- 原始FastAPI应用的基本功能
-- 传统架构下的API端点
-
-**运行方式：**
-```bash
-pytest tests/test_api.py -v
-```
-
 ### test_ddd_api.py
 测试DDD架构的API接口（主要测试文件）。
 
@@ -27,7 +15,7 @@ pytest tests/test_api.py -v
 
 **运行方式：**
 ```bash
-MEMORY_ENABLED=false pytest tests/test_ddd_api.py -v
+MEMORY_ENABLED=false uv run pytest tests/test_ddd_api.py -v
 ```
 
 **注意：** 使用 `MEMORY_ENABLED=false` 环境变量可以跳过数据库初始化，适合快速测试。
@@ -37,32 +25,33 @@ MEMORY_ENABLED=false pytest tests/test_ddd_api.py -v
 
 **测试内容：**
 - 领域实体（Conversation, Message等）
-- 值对象（SessionId等）
-- 领域逻辑
+- 值对象（SessionId, MessageRole, MessageContent等）
+- 领域逻辑和验证规则
 
 **运行方式：**
 ```bash
-pytest tests/test_ddd_domain.py -v
+uv run pytest tests/test_ddd_domain.py -v
 ```
 
 ## 运行所有测试
 
 ```bash
 # 运行所有测试
-pytest tests/ -v
+MEMORY_ENABLED=false uv run pytest tests/ -v
 
-# 运行DDD相关测试（跳过数据库）
-MEMORY_ENABLED=false pytest tests/test_ddd_api.py tests/test_ddd_domain.py -v
+# 运行特定测试
+uv run pytest tests/test_ddd_domain.py -v
 ```
 
 ## 测试覆盖率
 
 ```bash
-pytest tests/ --cov=src --cov-report=html
+uv run pytest tests/ --cov=src --cov-report=html
 ```
 
 ## 注意事项
 
-1. DDD API测试需要FastAPI应用正常启动
-2. 使用 `MEMORY_ENABLED=false` 可以跳过数据库依赖
-3. 确保所有依赖已安装：`pip install -e .`
+1. 项目使用 uv 虚拟环境管理工具
+2. DDD API测试需要FastAPI应用正常启动
+3. 使用 `MEMORY_ENABLED=false` 可以跳过数据库依赖
+4. 确保所有依赖已安装：`uv pip install -e .`

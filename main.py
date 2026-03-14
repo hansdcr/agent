@@ -1,124 +1,108 @@
-"""AI Agent FastAPI应用入口.
-
-提供DeepSeek聊天API接口。
-"""
+"""AI Agent FastAPI应用入口 - DDD架构版本"""
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict
+from typing import AsyncIterator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from src.api.models.response import ApiResponse
-from src.api.routes import chat
+from src.application.chat.commands import ChatCommandHandler
+from src.infrastructure.persistence.repositories.conversation_repository import (
+    InMemoryConversationRepository,
+)
+from src.infrastructure.persistence.repositories.memory_repository import (
+    PostgresMemoryRepository,
+)
+from src.infrastructure.persistence.models import Base
+from src.infrastructure.external.llm.deepseek_service import DeepSeekLLMService
+from src.interfaces.api.rest import chat
+from src.interfaces.api.schemas import ApiResponse
 from src.config.settings import Settings
-from src.core.exceptions import AppException
-from src.core.logger import setup_logger, get_logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """应用生命周期管理.
-
-    Args:
-        app: FastAPI应用实例
-
-    Yields:
-        None
-    """
-    # 启动时初始化
+    """应用生命周期管理"""
+    # 加载配置
     settings = Settings()
     app.state.settings = settings
 
-    # 初始化日志系统
-    logger = setup_logger(
-        name="ai_agent",
-        level=settings.log_level,
-        log_file=settings.log_file,
-        max_bytes=settings.log_max_bytes,
-        backup_count=settings.log_backup_count,
-        enable_color=settings.log_enable_color,
+    # 初始化仓储
+    conversation_repo = InMemoryConversationRepository()
+
+    # 初始化记忆仓储（如果启用）
+    memory_repo = None
+    if settings.memory_enabled:
+        # 转换数据库URL
+        database_url = settings.database_url
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
+
+        # 创建数据库引擎
+        engine = create_async_engine(database_url, echo=False)
+        session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建表
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        memory_repo = PostgresMemoryRepository(session_factory)
+
+    # 初始化LLM服务
+    llm_service = DeepSeekLLMService(
+        api_key=settings.deepseek_api_key,
+        model=settings.deepseek_model,
+        base_url=settings.deepseek_base_url,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
     )
 
-    logger.info("🚀 AI Agent启动中...")
-    logger.info("✓ 配置加载成功")
-    logger.info(f"✓ 模型: {settings.deepseek_model}")
-    logger.info(f"✓ 日志级别: {settings.log_level}")
-    if settings.log_file:
-        logger.info(f"✓ 日志文件: {settings.log_file}")
-
-    # 初始化记忆系统
-    from src.api.routes.chat import initialize_memory_system
-
-    await initialize_memory_system(
-        database_url=settings.database_url,
-        enabled=settings.memory_enabled,
+    # 初始化应用服务
+    chat_handler = ChatCommandHandler(
+        conversation_repo=conversation_repo,
+        llm_service=llm_service,
+        memory_repo=memory_repo,
+        system_prompt=settings.system_prompt,
     )
+
+    app.state.chat_handler = chat_handler
+
+    print("🚀 AI Agent启动成功 (DDD架构)")
+    print(f"✓ 模型: {settings.deepseek_model}")
+    print(f"✓ 记忆系统: {'启用' if settings.memory_enabled else '禁用'}")
 
     yield
 
-    # 关闭时清理
-    logger.info("👋 AI Agent关闭")
+    print("👋 AI Agent关闭")
 
 
 app = FastAPI(
-    title="AI Agent API",
-    description="基于DeepSeek的AI智能体API",
-    version="0.1.0",
+    title="AI Agent API (DDD)",
+    description="基于DDD架构的AI智能体API",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
-# 配置CORS - 必须在其他中间件之前
+# 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 开发环境允许所有来源
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-
-@app.exception_handler(AppException)
-async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-    """全局AppException异常处理器.
-
-    Args:
-        request: FastAPI请求对象
-        exc: AppException异常实例
-
-    Returns:
-        统一格式的JSON错误响应
-    """
-    logger = get_logger()
-    logger.error(
-        f"AppException: {exc.data.get('error')} | "
-        f"Code: {exc.code} | "
-        f"Path: {request.url.path}"
-    )
-
-    return JSONResponse(
-        status_code=exc.code,
-        content={
-            "code": exc.code,
-            "status": exc.status,
-            "data": exc.data,
-            "message": exc.message,
-        },
-    )
-
-
 # 注册路由
 app.include_router(chat.router)
 
 
 @app.get("/api/health")
-async def health_check() -> ApiResponse[Dict[str, str]]:
-    """健康检查接口.
-
-    Returns:
-        统一格式的健康状态响应
-    """
-    health_data = {"status": "healthy", "version": "0.1.0"}
-    return ApiResponse.success(data=health_data)
+async def health_check() -> ApiResponse:
+    """健康检查接口"""
+    return ApiResponse.success(data={"status": "healthy", "version": "0.2.0"})
