@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Literal
+from src.domain.shared.exceptions import InvalidMessageException
 
 
 @dataclass(frozen=True)
@@ -29,5 +30,4 @@ class MessageContent:
 
     def __post_init__(self):
         if not self.value or not self.value.strip():
-            from src.domain.shared.exceptions import InvalidMessageException
             raise InvalidMessageException("消息内容不能为空")
