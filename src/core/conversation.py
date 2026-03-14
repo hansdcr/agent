@@ -4,9 +4,12 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Literal
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional
 
 from src.core.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.core.memory import MemoryManager
 
 logger = get_logger("conversation")
 
@@ -41,10 +44,12 @@ class Conversation:
     Attributes:
         system_prompt: 系统提示词
         messages: 消息列表
+        memory_manager: 记忆管理器（可选）
     """
 
     system_prompt: str = "你是一个有帮助的AI助手。"
     messages: List[Message] = field(default_factory=list)
+    memory_manager: Optional["MemoryManager"] = None
 
     def __post_init__(self):
         """初始化后处理，添加系统消息."""
@@ -82,3 +87,27 @@ class Conversation:
         if self.system_prompt:
             self.messages.append(Message(role="system", content=self.system_prompt))
         logger.info(f"清空对话历史 | 清除消息数: {message_count}")
+
+    async def add_memory_context(self, session_id: str) -> None:
+        """添加记忆上下文到对话.
+
+        Args:
+            session_id: 会话ID
+        """
+        if not self.memory_manager:
+            return
+
+        # 获取相关记忆
+        memories = await self.memory_manager.get_relevant_memories(
+            session_id=session_id,
+            limit=5,
+        )
+
+        if memories:
+            # 格式化并插入记忆上下文
+            memory_context = self.memory_manager.format_memories_for_context(memories)
+            memory_message = Message(role="system", content=memory_context)
+            # 插入到系统消息之后
+            self.messages.insert(1, memory_message)
+            logger.info(f"添加记忆上下文 | 记忆数量: {len(memories)}")
+

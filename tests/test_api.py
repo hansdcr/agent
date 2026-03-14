@@ -30,7 +30,7 @@ async def test_health_check():
     """测试健康检查接口."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
+        response = await client.get("/api/health")
         assert response.status_code == 200
         data = response.json()
         # 验证统一响应格式
@@ -57,7 +57,7 @@ async def test_chat_endpoint(test_settings):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             # 发送第一条消息
             response = await client.post(
-                "/chat/", json={"message": "你好", "session_id": None}
+                "/api/chat/", json={"message": "你好", "session_id": None}
             )
             assert response.status_code == 200
             data = response.json()
@@ -73,7 +73,7 @@ async def test_chat_endpoint(test_settings):
             session_id = data["data"]["session_id"]
             mock_instance.chat = AsyncMock(return_value="再见！")
             response = await client.post(
-                "/chat/", json={"message": "再见", "session_id": session_id}
+                "/api/chat/", json={"message": "再见", "session_id": session_id}
             )
             assert response.status_code == 200
             data = response.json()
@@ -106,7 +106,7 @@ async def test_chat_stream_endpoint(test_settings):
             # 发送流式请求
             async with client.stream(
                 "POST",
-                "/chat/stream",
+                "/api/chat/stream",
                 json={"message": "你好", "session_id": None},
             ) as response:
                 assert response.status_code == 200
@@ -129,5 +129,5 @@ async def test_chat_empty_message():
     """测试空消息验证."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/chat/", json={"message": ""})
+        response = await client.post("/api/chat/", json={"message": ""})
         assert response.status_code == 422  # Validation error

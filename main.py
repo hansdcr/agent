@@ -48,6 +48,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.log_file:
         logger.info(f"✓ 日志文件: {settings.log_file}")
 
+    # 初始化记忆系统
+    from src.api.routes.chat import initialize_memory_system
+
+    await initialize_memory_system(
+        database_url=settings.database_url,
+        enabled=settings.memory_enabled,
+    )
+
     yield
 
     # 关闭时清理

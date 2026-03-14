@@ -85,6 +85,30 @@ class Settings(BaseSettings):
         validation_alias="LOG_ENABLE_COLOR",
     )
 
+    # 数据库配置
+    database_url: str = Field(
+        default="postgresql://agent:agent123@localhost:5432/agent_db",
+        description="PostgreSQL数据库连接URL",
+        validation_alias="DATABASE_URL",
+    )
+
+    # 记忆系统配置
+    memory_enabled: bool = Field(
+        default=True,
+        description="是否启用记忆系统",
+        validation_alias="MEMORY_ENABLED",
+    )
+    memory_max_context_memories: int = Field(
+        default=5,
+        description="添加到上下文的最大记忆数量",
+        validation_alias="MEMORY_MAX_CONTEXT_MEMORIES",
+    )
+    memory_cleanup_days: int = Field(
+        default=30,
+        description="记忆清理天数（短期记忆）",
+        validation_alias="MEMORY_CLEANUP_DAYS",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

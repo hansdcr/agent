@@ -4,7 +4,7 @@
 """
 
 import uuid
-from typing import AsyncIterator, Dict, Tuple
+from typing import AsyncIterator, Dict, Optional, Tuple
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -15,6 +15,7 @@ from src.core.conversation import Conversation
 from src.core.exceptions import InternalServerException
 from src.core.llm import DeepSeekClient
 from src.core.logger import get_logger
+from src.core.memory import MemoryManager, PostgresMemoryStorage
 
 logger = get_logger("chat")
 
@@ -22,6 +23,33 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 # 会话存储（内存）
 sessions: Dict[str, Conversation] = {}
+
+# 记忆管理器（全局）
+memory_manager: Optional[MemoryManager] = None
+
+
+async def initialize_memory_system(database_url: str, enabled: bool = True) -> None:
+    """初始化记忆系统.
+
+    Args:
+        database_url: 数据库连接URL
+        enabled: 是否启用记忆系统
+    """
+    global memory_manager
+
+    if not enabled:
+        logger.info("记忆系统未启用")
+        return
+
+    try:
+        storage = PostgresMemoryStorage(database_url=database_url)
+        await storage.initialize()
+        memory_manager = MemoryManager(storage=storage)
+        logger.info("记忆系统初始化成功")
+    except Exception as e:
+        logger.error(f"记忆系统初始化失败: {e}")
+        # 不抛出异常，允许应用继续运行
+        memory_manager = None
 
 
 def get_or_create_session(
@@ -68,6 +96,11 @@ async def chat(
         request_data.session_id, settings.system_prompt
     )
 
+    # 设置记忆管理器并添加记忆上下文
+    if memory_manager:
+        conversation.memory_manager = memory_manager
+        await conversation.add_memory_context(session_id)
+
     # 添加用户消息
     conversation.add_user_message(request_data.message)
 
@@ -85,6 +118,14 @@ async def chat(
         response = await client.chat(conversation.get_messages())
         # 添加助手消息
         conversation.add_assistant_message(response)
+
+        # 提取并保存记忆
+        if memory_manager:
+            await memory_manager.extract_and_save_memory(
+                conversation.get_messages(),
+                session_id,
+            )
+
         logger.info(f"聊天请求成功 | session_id: {session_id} | 响应长度: {len(response)} 字符")
         chat_response = ChatResponse(message=response, session_id=session_id)
         return ApiResponse.success(data=chat_response)
@@ -117,6 +158,11 @@ async def chat_stream(
         request_data.session_id, settings.system_prompt
     )
 
+    # 设置记忆管理器并添加记忆上下文
+    if memory_manager:
+        conversation.memory_manager = memory_manager
+        await conversation.add_memory_context(session_id)
+
     # 添加用户消息
     conversation.add_user_message(request_data.message)
 
@@ -144,6 +190,14 @@ async def chat_stream(
 
             # 添加完整的助手消息到会话
             conversation.add_assistant_message(full_response)
+
+            # 提取并保存记忆
+            if memory_manager:
+                await memory_manager.extract_and_save_memory(
+                    conversation.get_messages(),
+                    session_id,
+                )
+
             logger.info(f"流式聊天完成 | session_id: {session_id} | 响应长度: {len(full_response)} 字符")
             # 发送结束标记
             yield "data: {'done': true}\n\n"
