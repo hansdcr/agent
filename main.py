@@ -61,13 +61,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 配置CORS
+# 配置CORS - 必须在其他中间件之前
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite默认端口5173
+    allow_origins=["*"],  # 开发环境允许所有来源
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
