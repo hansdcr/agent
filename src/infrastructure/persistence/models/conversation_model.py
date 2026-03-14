@@ -19,6 +19,8 @@ class ConversationModel(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(String(255), unique=True, nullable=False, index=True)
+    user_id = Column(String(255), nullable=True, index=True)  # 用户ID（人类或agent）
+    agent_id = Column(String(255), nullable=True, index=True)  # 对话的agent ID
     system_prompt = Column(Text, nullable=True)
     messages = Column(JSONB, nullable=False, default=list)
     message_count = Column(Integer, nullable=False, default=0)

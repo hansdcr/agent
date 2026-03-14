@@ -71,6 +71,24 @@ class PostgresConversationRepository(ConversationRepository):
                 return model.to_entity()
             return None
 
+    async def find_by_user_and_agent(
+        self, user_id: str, agent_id: str
+    ) -> Optional[Conversation]:
+        """根据用户ID和Agent ID查找对话"""
+        async with self._session_factory() as session:
+            stmt = (
+                select(ConversationModel)
+                .where(ConversationModel.user_id == user_id)
+                .where(ConversationModel.agent_id == agent_id)
+                .order_by(ConversationModel.updated_at.desc())
+            )
+            result = await session.execute(stmt)
+            model = result.scalar_one_or_none()
+
+            if model:
+                return model.to_entity()
+            return None
+
     async def delete(self, session_id: SessionId) -> None:
         """删除对话"""
         async with self._session_factory() as session:

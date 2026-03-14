@@ -10,6 +10,8 @@ class ChatRequest(BaseModel):
     """聊天请求模型"""
     message: str = Field(..., min_length=1, description="用户消息")
     session_id: Optional[str] = Field(None, description="会话ID")
+    user_id: Optional[str] = Field(None, description="用户ID")
+    agent_id: Optional[str] = Field(None, description="Agent ID")
 
 
 class ChatResponse(BaseModel):

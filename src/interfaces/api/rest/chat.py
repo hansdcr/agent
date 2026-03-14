@@ -20,12 +20,43 @@ async def chat(
     handler: ChatCommandHandler = Depends(get_chat_handler),
 ) -> ApiResponse[ChatResponse]:
     """普通聊天接口"""
+    from src.domain.chat.value_objects import SessionId
+    from src.domain.chat.entities import Conversation
+
+    # 如果提供了 user_id 和 agent_id，尝试查找现有会话
+    session_id_str = request.session_id
+    if not session_id_str and request.user_id and request.agent_id:
+        # 根据 user_id 和 agent_id 查找会话
+        existing_conversation = await handler.conversation_repo.find_by_user_and_agent(
+            request.user_id, request.agent_id
+        )
+        if existing_conversation:
+            session_id_str = existing_conversation.session_id.value
+
     dto = ChatRequestDTO(
         message=request.message,
-        session_id=request.session_id,
+        session_id=session_id_str,
     )
 
     result = await handler.handle(dto)
+
+    # 如果是新会话，保存 user_id 和 agent_id
+    if request.user_id and request.agent_id:
+        session_id = SessionId.from_string(result.session_id)
+        conversation = await handler.conversation_repo.find_by_id(session_id)
+        if conversation:
+            # 更新数据库中的 user_id 和 agent_id
+            async with handler.conversation_repo._session_factory() as session:
+                from sqlalchemy import select, update
+                from src.infrastructure.persistence.models import ConversationModel
+
+                stmt = (
+                    update(ConversationModel)
+                    .where(ConversationModel.session_id == result.session_id)
+                    .values(user_id=request.user_id, agent_id=request.agent_id)
+                )
+                await session.execute(stmt)
+                await session.commit()
 
     response = ChatResponse(
         message=result.message,
