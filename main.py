@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.api.models.response import ApiResponse
@@ -58,6 +59,15 @@ app = FastAPI(
     description="基于DeepSeek的AI智能体API",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# 配置CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite默认端口5173
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
