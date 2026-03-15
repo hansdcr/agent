@@ -54,6 +54,8 @@ class ConversationModel(Base):
         conversation = Conversation(
             session_id=session_id,
             system_prompt=self.system_prompt or "",
+            user_id=self.user_id,
+            agent_id=self.agent_id,
         )
 
         # 重建消息列表（跳过第一条系统消息，因为已经在构造函数中添加）

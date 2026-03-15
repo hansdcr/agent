@@ -16,6 +16,8 @@ class Conversation:
     session_id: SessionId
     messages: List[Message] = field(default_factory=list)
     system_prompt: Optional[str] = None
+    user_id: Optional[str] = None
+    agent_id: Optional[str] = None
 
     def __post_init__(self):
         """初始化后处理"""

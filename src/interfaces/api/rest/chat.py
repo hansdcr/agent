@@ -36,27 +36,11 @@ async def chat(
     dto = ChatRequestDTO(
         message=request.message,
         session_id=session_id_str,
+        user_id=request.user_id,
+        agent_id=request.agent_id,
     )
 
     result = await handler.handle(dto)
-
-    # 如果是新会话，保存 user_id 和 agent_id
-    if request.user_id and request.agent_id:
-        session_id = SessionId.from_string(result.session_id)
-        conversation = await handler.conversation_repo.find_by_id(session_id)
-        if conversation:
-            # 更新数据库中的 user_id 和 agent_id
-            async with handler.conversation_repo._session_factory() as session:
-                from sqlalchemy import select, update
-                from src.infrastructure.persistence.models import ConversationModel
-
-                stmt = (
-                    update(ConversationModel)
-                    .where(ConversationModel.session_id == result.session_id)
-                    .values(user_id=request.user_id, agent_id=request.agent_id)
-                )
-                await session.execute(stmt)
-                await session.commit()
 
     response = ChatResponse(
         message=result.message,

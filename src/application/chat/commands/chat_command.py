@@ -36,12 +36,16 @@ class ChatCommandHandler:
                 conversation = Conversation(
                     session_id=session_id,
                     system_prompt=self.system_prompt,
+                    user_id=request.user_id,
+                    agent_id=request.agent_id,
                 )
         else:
             session_id = SessionId.generate()
             conversation = Conversation(
                 session_id=session_id,
                 system_prompt=self.system_prompt,
+                user_id=request.user_id,
+                agent_id=request.agent_id,
             )
 
         # 添加记忆上下文（如果启用）

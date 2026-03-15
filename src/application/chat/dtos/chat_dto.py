@@ -9,6 +9,8 @@ class ChatRequestDTO:
     """聊天请求DTO"""
     message: str
     session_id: Optional[str] = None
+    user_id: Optional[str] = None
+    agent_id: Optional[str] = None
 
 
 @dataclass
