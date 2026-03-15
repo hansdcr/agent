@@ -1,7 +1,8 @@
 """聊天领域 - 消息实体"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
+from datetime import datetime, timezone
 
 from ..value_objects import MessageRole, MessageContent
 
@@ -11,12 +12,14 @@ class Message:
     """消息实体"""
     role: MessageRole
     content: MessageContent
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, str]:
         """转换为字典格式"""
         return {
             "role": self.role.value,
             "content": self.content.value,
+            "timestamp": self.timestamp.isoformat(),
         }
 
     @staticmethod

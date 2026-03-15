@@ -60,12 +60,26 @@ class ConversationModel(Base):
         for msg_data in self.messages[1:]:  # 跳过系统消息
             role = msg_data.get("role")
             content = msg_data.get("content", "")
+            timestamp_str = msg_data.get("timestamp")
 
+            # 创建消息对象
+            from datetime import datetime, timezone
             if role == "user":
-                conversation.add_user_message(content)
+                msg = Message.create_user(content)
             elif role == "assistant":
-                conversation.add_assistant_message(content)
+                msg = Message.create_assistant(content)
             elif role == "system":
-                conversation.add_system_message(content)
+                msg = Message.create_system(content)
+            else:
+                continue
+
+            # 如果有timestamp，覆盖默认的timestamp
+            if timestamp_str:
+                try:
+                    msg.timestamp = datetime.fromisoformat(timestamp_str)
+                except (ValueError, TypeError):
+                    pass  # 如果解析失败，使用默认的timestamp
+
+            conversation.messages.append(msg)
 
         return conversation
