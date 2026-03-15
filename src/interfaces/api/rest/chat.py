@@ -10,6 +10,8 @@ from src.application.chat.dtos import ChatRequestDTO, ChatResponseDTO
 from ..schemas import ChatRequest, ChatResponse, ApiResponse, HistoryResponse, MessageItem, SessionListResponse, SessionItem
 from ..dependencies import get_chat_handler
 
+from src.domain.chat.value_objects import SessionId
+from src.domain.chat.entities import Conversation
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -20,8 +22,6 @@ async def chat(
     handler: ChatCommandHandler = Depends(get_chat_handler),
 ) -> ApiResponse[ChatResponse]:
     """普通聊天接口"""
-    from src.domain.chat.value_objects import SessionId
-    from src.domain.chat.entities import Conversation
 
     # 如果提供了 user_id 和 agent_id，尝试查找现有会话
     session_id_str = request.session_id

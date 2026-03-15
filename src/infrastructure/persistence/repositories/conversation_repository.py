@@ -89,6 +89,7 @@ class PostgresConversationRepository(ConversationRepository):
                 .where(ConversationModel.agent_id == agent_id)
                 .where(ConversationModel.created_at >= today_start)
                 .order_by(ConversationModel.updated_at.desc())
+                .limit(1)
             )
             result = await session.execute(stmt)
             model = result.scalar_one_or_none()
