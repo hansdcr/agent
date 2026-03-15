@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from src.application.chat.commands import ChatCommandHandler
 from src.application.chat.dtos import ChatRequestDTO, ChatResponseDTO
-from ..schemas import ChatRequest, ChatResponse, ApiResponse, HistoryResponse, MessageItem
+from ..schemas import ChatRequest, ChatResponse, ApiResponse, HistoryResponse, MessageItem, SessionListResponse, SessionItem
 from ..dependencies import get_chat_handler
 
 
@@ -110,6 +110,56 @@ async def get_chat_history(
                 messages=[]
             )
         )
+
+
+@router.get("/chat/sessions", response_model=ApiResponse[SessionListResponse])
+async def get_sessions(
+    user_id: str,
+    agent_id: str,
+    handler: ChatCommandHandler = Depends(get_chat_handler),
+) -> ApiResponse[SessionListResponse]:
+    """获取会话列表"""
+    try:
+        # 查找所有会话
+        conversations = await handler.conversation_repo.find_all_by_user_and_agent(
+            user_id, agent_id
+        )
+
+        # 转换为响应格式
+        session_items = []
+        for conv in conversations:
+            # 获取会话的元数据
+            from src.domain.chat.value_objects import SessionId
+            sid = SessionId.from_string(conv.session_id.value)
+            conversation = await handler.conversation_repo.find_by_id(sid)
+
+            if conversation:
+                # 从数据库获取创建时间和更新时间
+                async with handler.conversation_repo._session_factory() as session:
+                    from sqlalchemy import select
+                    from src.infrastructure.persistence.models import ConversationModel
+
+                    stmt = select(ConversationModel).where(
+                        ConversationModel.session_id == conv.session_id.value
+                    )
+                    result = await session.execute(stmt)
+                    model = result.scalar_one_or_none()
+
+                    if model:
+                        session_items.append(
+                            SessionItem(
+                                session_id=conv.session_id.value,
+                                created_at=model.created_at.isoformat(),
+                                updated_at=model.updated_at.isoformat(),
+                                message_count=conversation.message_count(),
+                            )
+                        )
+
+        return ApiResponse.success(
+            data=SessionListResponse(sessions=session_items)
+        )
+    except Exception as e:
+        return ApiResponse.error(code=500, message=f"获取会话列表失败: {str(e)}")
 
 
 @router.post("/stream")

@@ -1,7 +1,8 @@
 """基础设施层 - 对话仓储实现"""
 
-from typing import Dict, Optional
-from sqlalchemy import select
+from typing import Dict, Optional, List
+from datetime import datetime, timezone
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from src.domain.chat.entities import Conversation
@@ -48,6 +49,8 @@ class PostgresConversationRepository(ConversationRepository):
 
             if existing:
                 # 更新现有记录
+                existing.user_id = getattr(conversation, 'user_id', existing.user_id)
+                existing.agent_id = getattr(conversation, 'agent_id', existing.agent_id)
                 existing.system_prompt = conversation.system_prompt
                 existing.messages = conversation.get_messages_as_dicts()
                 existing.message_count = conversation.message_count()
@@ -74,12 +77,17 @@ class PostgresConversationRepository(ConversationRepository):
     async def find_by_user_and_agent(
         self, user_id: str, agent_id: str
     ) -> Optional[Conversation]:
-        """根据用户ID和Agent ID查找对话"""
+        """根据用户ID和Agent ID查找今天的对话"""
         async with self._session_factory() as session:
+            # 获取今天的开始时间（UTC）
+            now = datetime.now(timezone.utc)
+            today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+
             stmt = (
                 select(ConversationModel)
                 .where(ConversationModel.user_id == user_id)
                 .where(ConversationModel.agent_id == agent_id)
+                .where(ConversationModel.created_at >= today_start)
                 .order_by(ConversationModel.updated_at.desc())
             )
             result = await session.execute(stmt)
@@ -88,6 +96,23 @@ class PostgresConversationRepository(ConversationRepository):
             if model:
                 return model.to_entity()
             return None
+
+    async def find_all_by_user_and_agent(
+        self, user_id: str, agent_id: str, limit: int = 50
+    ) -> List[Conversation]:
+        """根据用户ID和Agent ID查找所有对话（按时间倒序）"""
+        async with self._session_factory() as session:
+            stmt = (
+                select(ConversationModel)
+                .where(ConversationModel.user_id == user_id)
+                .where(ConversationModel.agent_id == agent_id)
+                .order_by(ConversationModel.created_at.desc())
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            models = result.scalars().all()
+
+            return [model.to_entity() for model in models]
 
     async def delete(self, session_id: SessionId) -> None:
         """删除对话"""

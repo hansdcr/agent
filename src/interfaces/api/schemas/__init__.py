@@ -32,6 +32,19 @@ class HistoryResponse(BaseModel):
     messages: List[MessageItem] = Field(default_factory=list, description="消息列表")
 
 
+class SessionItem(BaseModel):
+    """会话项模型"""
+    session_id: str = Field(..., description="会话ID")
+    created_at: str = Field(..., description="创建时间")
+    updated_at: str = Field(..., description="更新时间")
+    message_count: int = Field(..., description="消息数量")
+
+
+class SessionListResponse(BaseModel):
+    """会话列表响应模型"""
+    sessions: List[SessionItem] = Field(default_factory=list, description="会话列表")
+
+
 class ApiResponse(BaseModel, Generic[T]):
     """统一API响应格式"""
     code: int = Field(200, description="状态码")

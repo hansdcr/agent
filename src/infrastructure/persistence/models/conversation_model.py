@@ -41,6 +41,8 @@ class ConversationModel(Base):
 
         return ConversationModel(
             session_id=conversation.session_id.value,
+            user_id=getattr(conversation, 'user_id', None),
+            agent_id=getattr(conversation, 'agent_id', None),
             system_prompt=conversation.system_prompt,
             messages=messages_data,
             message_count=conversation.message_count(),
