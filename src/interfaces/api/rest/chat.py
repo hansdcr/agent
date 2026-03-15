@@ -75,7 +75,11 @@ async def get_chat_history(
         # 获取消息列表（排除 system 消息）
         messages = conversation.get_messages_as_dicts()
         message_items = [
-            MessageItem(role=msg["role"], content=msg["content"])
+            MessageItem(
+                role=msg["role"],
+                content=msg["content"],
+                timestamp=msg.get("timestamp")
+            )
             for msg in messages
             if msg["role"] != "system"  # 不返回系统消息给前端
         ]

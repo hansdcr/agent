@@ -24,6 +24,7 @@ class MessageItem(BaseModel):
     """消息项模型"""
     role: str = Field(..., description="消息角色：system/user/assistant")
     content: str = Field(..., description="消息内容")
+    timestamp: Optional[str] = Field(None, description="消息时间戳")
 
 
 class HistoryResponse(BaseModel):
