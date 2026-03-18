@@ -19,6 +19,7 @@ from src.infrastructure.persistence.repositories.memory_repository import (
 from src.infrastructure.persistence.models import Base
 from src.infrastructure.external.llm.deepseek_service import DeepSeekLLMService
 from src.interfaces.api.rest import chat
+from src.interfaces.api.rest import agent as agent_router
 from src.interfaces.api.schemas import ApiResponse
 from src.config.settings import Settings
 
@@ -73,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     app.state.chat_handler = chat_handler
+    app.state.session_factory = session_factory
 
     print("🚀 AI Agent启动成功 (DDD架构)")
     print(f"✓ 模型: {settings.deepseek_model}")
@@ -103,6 +105,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(chat.router)
+app.include_router(agent_router.router)
 
 # 挂载静态文件（简单的 HTML 聊天界面）
 static_dir = os.path.join(os.path.dirname(__file__), "static")

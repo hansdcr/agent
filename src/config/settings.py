@@ -92,6 +92,13 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
+    # Cultrue 后端配置
+    cultrue_base_url: str = Field(
+        default="http://localhost:8000",
+        description="Cultrue 后端服务地址",
+        validation_alias="CULTRUE_BASE_URL",
+    )
+
     # 记忆系统配置
     memory_enabled: bool = Field(
         default=True,

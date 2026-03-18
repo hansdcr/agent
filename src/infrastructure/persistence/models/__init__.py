@@ -2,5 +2,6 @@
 
 from .memory_model import MemoryModel, Base
 from .conversation_model import ConversationModel
+from .agent_credential_model import AgentCredentialModel
 
-__all__ = ["MemoryModel", "Base", "ConversationModel"]
+__all__ = ["MemoryModel", "Base", "ConversationModel", "AgentCredentialModel"]
