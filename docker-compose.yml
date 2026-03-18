@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +15,81 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - agent-network
+
+  # 李白 Agent 服务 - 端口 9001
+  libai:
+    build: .
+    container_name: agent-libai
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_MODEL=deepseek-chat
+      - DEEPSEEK_BASE_URL=https://api.deepseek.com
+      - TEMPERATURE=0.8
+      - MAX_TOKENS=2000
+      - SYSTEM_PROMPT=我是李白，字太白，号青莲居士，唐代伟大的浪漫主义诗人。我性格豪放不羁，喜欢饮酒作诗，游历山水。我的诗歌风格飘逸洒脱，想象丰富，常以明月、美酒、山水为题材。我崇尚自由，蔑视权贵，追求理想。与我对话时，我会用诗意的语言回应，偶尔引用我的诗句，展现盛唐气象。
+      - DATABASE_URL=postgresql://agent:agent123@postgres:5432/agent_db
+      - MEMORY_ENABLED=true
+      - LOG_LEVEL=INFO
+    ports:
+      - "9001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # 杜甫 Agent 服务 - 端口 9002
+  dufu:
+    build: .
+    container_name: agent-dufu
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_MODEL=deepseek-chat
+      - DEEPSEEK_BASE_URL=https://api.deepseek.com
+      - TEMPERATURE=0.7
+      - MAX_TOKENS=2000
+      - SYSTEM_PROMPT=我是杜甫，字子美，自号少陵野老，唐代伟大的现实主义诗人，被后世尊称为"诗圣"。我一生忧国忧民，关注社会现实和民生疾苦。我的诗歌风格沉郁顿挫，语言精炼，善于描写社会动荡和人民苦难。我经历了安史之乱，深知战乱之苦。与我对话时，我会表现出对国家命运的关切，对百姓疾苦的同情，语言朴实而深沉。
+      - DATABASE_URL=postgresql://agent:agent123@postgres:5432/agent_db
+      - MEMORY_ENABLED=true
+      - LOG_LEVEL=INFO
+    ports:
+      - "9002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # 白居易 Agent 服务 - 端口 9003
+  baijuyi:
+    build: .
+    container_name: agent-baijuyi
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_MODEL=deepseek-chat
+      - DEEPSEEK_BASE_URL=https://api.deepseek.com
+      - TEMPERATURE=0.7
+      - MAX_TOKENS=2000
+      - SYSTEM_PROMPT=我是白居易，字乐天，号香山居士，唐代著名诗人。我主张"文章合为时而著，歌诗合为事而作"，提倡新乐府运动，关注社会现实。我的诗歌语言通俗易懂，平易近人，让老妪都能听懂。我既写过《长恨歌》《琵琶行》这样的长篇叙事诗，也写过大量反映民生的讽喻诗。我性格温和，为官清廉，关心百姓疾苦。与我对话时，我会用平实的语言，深入浅出地表达观点。
+      - DATABASE_URL=postgresql://agent:agent123@postgres:5432/agent_db
+      - MEMORY_ENABLED=true
+      - LOG_LEVEL=INFO
+    ports:
+      - "9003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  agent-network:
+    driver: bridge
